@@ -1,0 +1,30 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - cd /usr/bin
+      - curl -s -qL -o terraform.zip https://releases.hashicorp.com/terraform/0.13.0/terraform_0.13.0_linux_amd64.zip
+      - unzip -o terraform.zip
+      - cd -
+    # - sed -i "s/HOST/$HOST/" .platform/nginx/nginx.conf
+      - zip -r latest.zip .
+# Uncomment if you want your image be pushed to ECR
+      # - zip -r latest.zip Dockerrun.aws.json .platform   
+      # # login to ECR, where the docker image will be pushed
+      # - $(aws ecr get-login --no-include-email --region eu-central-1)
+      # # install docker
+      # - nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2&
+      # - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
+  #pre_build:
+  #  commands:
+  #    # build docker image and push it to ECR
+  #    - docker build -t <ECR_container_name> .  # replace with your ECR container name
+  #    - docker tag $ECR:latest <account_number>.dkr.ecr.<region>.amazonaws.com/<ECR_container_name>:latest  # replace account number, region and ECR container name
+  #    - docker push <account_dumber>.dkr.ecr.<region>.amazonaws.com/<ECR_container_name>:latest  #replace account number ECR container name 
+  build:
+    commands:
+      - terraform init -backend-config=backend
+      - terraform apply -auto-approve -var-file=variables.tfvars
+      - terraform taint aws_s3_bucket_object.file_upload  # force upload 
+      - terraform taint aws_elastic_beanstalk_application_version.latest  # force deploy
+      - aws --region <region> elasticbeanstalk update-environment --environment-name $(terraform output env_name) --version-label latest.zip # replace region

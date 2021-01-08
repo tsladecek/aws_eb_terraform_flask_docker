@@ -1,0 +1,3 @@
+bucket = "tfstate-bucket"
+key = "app/terraform.tfstate"
+region = "<region>"
